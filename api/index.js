@@ -3,13 +3,21 @@ import { neon } from '@neondatabase/serverless';
 const sql = neon(process.env.DATABASE_URL);
 
 export default async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-key');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     res.setHeader('Content-Type', 'application/json');
 
-    const action     = req.method === 'POST' ? req.body?.action    : req.query?.action;
-    const device_id  = req.method === 'POST' ? req.body?.device_id : req.query?.device_id;
+    const action      = req.method === 'POST' ? req.body?.action     : req.query?.action;
+    const device_id   = req.method === 'POST' ? req.body?.device_id  : req.query?.device_id;
     const install_time = req.body?.install_time ?? null;
 
-    if (!device_id) {
+    if (!device_id && action !== 'admin_list') {
         return res.status(400).json({ status: 'error', msg: 'missing device_id' });
     }
 
@@ -45,7 +53,6 @@ export default async function handler(req, res) {
             });
 
         } else if (action === 'admin_list') {
-            // 管理后台拉取列表，加简单密钥验证
             const key = req.headers['x-admin-key'];
             if (key !== process.env.ADMIN_KEY) {
                 return res.status(403).json({ status: 'forbidden' });
